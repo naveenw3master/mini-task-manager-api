@@ -1,0 +1,60 @@
+services:
+    laravel:
+        build:
+            context: .
+            dockerfile: ./Dockerfile
+        container_name: mini-task-manager-api-laravel
+        restart: unless-stopped
+        volumes:
+            - .:/var/www
+        ports:
+            - "${APP_PORT:-8000}:8000"
+        depends_on:
+            mysql:
+                condition: service_healthy
+        networks:
+            - mini-task-manager-api-network
+
+    mysql:
+        image: mysql:8.0
+        container_name: mini-task-manager-api-mysql
+        ports:
+            - '${FORWARD_DB_PORT:-3306}:3306'
+        environment:
+            MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_ROOT_HOST: '%'
+            MYSQL_DATABASE: '${DB_DATABASE}'
+            # MYSQL_USER: '${DB_USERNAME}'
+            # MYSQL_PASSWORD: '${DB_PASSWORD}'
+            # MYSQL_ALLOW_EMPTY_PASSWORD: 1
+        volumes:
+            - mysql-data:/var/lib/mysql
+        healthcheck:
+            test: [ "CMD-SHELL", "mysqladmin ping -h localhost" ]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            - mini-task-manager-api-network
+
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        container_name: mini-task-manager-api-phpmyadmin
+        ports:
+            - "8088:80"
+        restart: always
+        environment:
+            PMA_HOST: mysql
+        depends_on:
+            - mysql
+        networks:
+            - mini-task-manager-api-network
+
+networks:
+    mini-task-manager-api-network:
+        driver: bridge
+        name: mini-task-manager-api-network
+
+volumes:
+    mysql-data:
+        driver: local
